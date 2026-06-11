@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================================
-# Nova Wizard — One-line Installer
+# Nahan Wizard — One-line Installer
 # Usage: bash <(curl -fsSL https://raw.githubusercontent.com/YOUR_REPO/main/install.sh)
 # ============================================================
 
@@ -51,7 +51,7 @@ cat << "EOF"
 ╚═╝  ╚═══╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝
 EOF
 echo -e "${NC}"
-echo -e " ${INFO} Installing nova Wizard for ${BOLD}${OS}/${ARCH}${NC}...\n"
+echo -e " ${INFO} Installing Nahan Wizard for ${BOLD}${OS}/${ARCH}${NC}...\n"
 
 # Get latest release URL
 LATEST_URL="https://github.com/${REPO}/releases/latest/download/${BINARY_NAME}-${OS}-${ARCH}"
