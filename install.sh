@@ -18,7 +18,7 @@ ERR="${RED}[-]${NC}"
 INFO="${CYAN}[i]${NC}"
 
 REPO="amzolghadr/nova-wizard"
-BINARY_NAME="nahan-wizard-"
+BINARY_NAME="nahan-wizard"
 INSTALL_DIR="/usr/local/bin"
 
 # Detect OS and architecture
