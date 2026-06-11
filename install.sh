@@ -1,9 +1,4 @@
 #!/usr/bin/env bash
-# ============================================================
-# Nahan Wizard — One-line Installer
-# Usage: bash <(curl -fsSL https://raw.githubusercontent.com/YOUR_REPO/main/install.sh)
-# ============================================================
-
 set -e
 
 CYAN='\033[1;36m'
@@ -18,10 +13,9 @@ ERR="${RED}[-]${NC}"
 INFO="${CYAN}[i]${NC}"
 
 REPO="amzolghadr/nova-wizard"
-BINARY_NAME="nahan-wizard"
+BINARY_NAME="nova-wizard"
 INSTALL_DIR="/usr/local/bin"
 
-# Detect OS and architecture
 OS=$(uname -s | tr '[:upper:]' '[:lower:]')
 ARCH=$(uname -m)
 
@@ -35,31 +29,28 @@ case "$ARCH" in
     ;;
 esac
 
-# Termux detection
 if [ -d "/data/data/com.termux" ]; then
   INSTALL_DIR="$PREFIX/bin"
   OS="linux"
 fi
 
 echo -e "\n${CYAN}${BOLD}"
-cat << "EOF"
-███╗   ██╗ █████╗ ██╗  ██╗ █████╗ ███╗   ██╗
-████╗  ██║██╔══██╗██║  ██║██╔══██╗████╗  ██║
-██╔██╗ ██║███████║███████║███████║██╔██╗ ██║
-██║╚██╗██║██╔══██║██╔══██║██╔══██║██║╚██╗██║
-██║ ╚████║██║  ██║██║  ██║██║  ██║██║ ╚████║
-╚═╝  ╚═══╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝
-EOF
+cat << "LOGO"
+ _   _  _____  _   _  ___
+| \ | ||  _  || | | |/ _ \
+|  \| || | | || | | / /_\ \
+| . ' || | | || | | |  _  |
+| |\  |\ \_/ /\ \_/ / | | |
+\_| \_/ \___/  \___/\_| |_/
+LOGO
 echo -e "${NC}"
-echo -e " ${INFO} Installing Nahan Wizard for ${BOLD}${OS}/${ARCH}${NC}...\n"
+echo -e " ${INFO} Installing Nova-Proxy Wizard for ${BOLD}${OS}/${ARCH}${NC}...\n"
 
-# Get latest release URL
 LATEST_URL="https://github.com/${REPO}/releases/latest/download/${BINARY_NAME}-${OS}-${ARCH}"
 if [ "$OS" = "windows" ]; then
   LATEST_URL="${LATEST_URL}.exe"
 fi
 
-# Download
 TMP_FILE=$(mktemp)
 echo -e " ${INFO} Downloading from GitHub releases..."
 
@@ -68,11 +59,10 @@ if command -v curl &>/dev/null; then
 elif command -v wget &>/dev/null; then
   wget -q "$LATEST_URL" -O "$TMP_FILE"
 else
-  echo -e " ${ERR} Neither curl nor wget found. Please install one and retry."
+  echo -e " ${ERR} Neither curl nor wget found."
   exit 1
 fi
 
-# Install
 chmod +x "$TMP_FILE"
 
 if [ -w "$INSTALL_DIR" ]; then
@@ -83,8 +73,8 @@ else
   mkdir -p "$HOME/.local/bin"
   mv "$TMP_FILE" "$HOME/.local/bin/$BINARY_NAME"
   INSTALL_DIR="$HOME/.local/bin"
-  echo -e " ${YELLOW}[!]${NC} Installed to $INSTALL_DIR — make sure it's in your PATH"
+  echo -e " ${YELLOW}[!]${NC} Installed to $INSTALL_DIR -- add it to your PATH"
 fi
 
-echo -e " ${OK} Nahan Wizard installed to: ${CYAN}${INSTALL_DIR}/${BINARY_NAME}${NC}"
+echo -e " ${OK} Nova-Proxy Wizard installed to: ${CYAN}${INSTALL_DIR}/${BINARY_NAME}${NC}"
 echo -e " ${OK} Run it with: ${BOLD}${BINARY_NAME}${NC}\n"
