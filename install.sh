@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================================
-# Nahan Wizard — One-line Installer
+# Nova Wizard — One-line Installer
 # Usage: bash <(curl -fsSL https://raw.githubusercontent.com/YOUR_REPO/main/install.sh)
 # ============================================================
 
@@ -17,8 +17,8 @@ OK="${GREEN}[+]${NC}"
 ERR="${RED}[-]${NC}"
 INFO="${CYAN}[i]${NC}"
 
-REPO="amzolghadr/Nahan-wizard-"
-BINARY_NAME="nahan-wizard"
+REPO="amzolghadr/nova-wizard"
+BINARY_NAME="nova-wizard"
 INSTALL_DIR="/usr/local/bin"
 
 # Detect OS and architecture
