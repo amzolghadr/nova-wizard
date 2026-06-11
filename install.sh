@@ -17,7 +17,7 @@ OK="${GREEN}[+]${NC}"
 ERR="${RED}[-]${NC}"
 INFO="${CYAN}[i]${NC}"
 
-REPO="amzolghadr/Nahan-wizard-"
+REPO="amzolghadr/nova-wizard"
 BINARY_NAME="nova-wizard"
 INSTALL_DIR="/usr/local/bin"
 
