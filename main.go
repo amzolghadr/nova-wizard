@@ -17,7 +17,7 @@ import (
 	"time"
 )
 
-const VERSION = "v1.0.0"
+const VERSION = "v1.0.2"
 
 var httpClient = &http.Client{
 	Timeout: 30 * time.Second,
@@ -715,7 +715,10 @@ func installNova() {
 
 	if len(deployedEntries) > 0 {
 		printOutputURLs(deployedEntries)
-		fmt.Printf("\n %s Panel path: %s/Nova-Proxy%s\n", INFO, CYAN, NC)
+		for _, e := range deployedEntries {
+			fmt.Printf(" %s Panel URL: %s%s/admin%s
+", OK, CYAN, "https://"+e.WorkerURL, NC)
+		}
 		fmt.Printf(" %s Password  : %s%s%s\n\n", INFO, YELLOW, password, NC)
 	}
 
