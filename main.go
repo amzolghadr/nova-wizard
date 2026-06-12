@@ -17,7 +17,7 @@ import (
 	"time"
 )
 
-const VERSION = "v1.0.2"
+const VERSION = "v1.0.4"
 
 var httpClient = &http.Client{
 	Timeout: 30 * time.Second,
@@ -86,6 +86,7 @@ type WorkerEntry struct {
 	WorkerURL   string
 	KVID        string
 	KVName      string
+	Tagged      bool
 }
 
 var sessionToken = ""
@@ -93,6 +94,7 @@ var sessionToken = ""
 const configFile = ".nova.json"
 const tokenFile = ".nova-token"
 const workerJSURL = "https://raw.githubusercontent.com/IRNova/Nova-Proxy/main/worker.js"
+const wizardTag = "nova-wizard"
 const cfAPI = "https://api.cloudflare.com/client/v4"
 const charset = "abcdefghijklmnopqrstuvwxyz0123456789"
 
@@ -391,13 +393,58 @@ func enableWorkerSubdomain(accountID, workerName, token string) string {
 	return getWorkerSubdomain(accountID, workerName, token)
 }
 
+
+// addWorkerTag یه tag به worker اضافه می‌کنه
+func addWorkerTag(accountID, workerName, tag, token string) {
+	cfRequest("PUT",
+		fmt.Sprintf("/accounts/%s/workers/scripts/%s/tags/%s", accountID, workerName, tag),
+		token, nil,
+	)
+}
+
+
+func addWizardTag(accountID, workerName, token string) {
+	cfRequest("PUT",
+		fmt.Sprintf("/accounts/%s/workers/scripts/%s/script-tags", accountID, workerName),
+		token,
+		[]string{wizardTag},
+	)
+}
+
+func getWorkerTags(accountID, workerName, token string) []string {
+	result, err := cfRequest("GET",
+		fmt.Sprintf("/accounts/%s/workers/scripts/%s/script-tags", accountID, workerName),
+		token, nil,
+	)
+	if err != nil {
+		return nil
+	}
+	raw, _ := result["result"].([]interface{})
+	var tags []string
+	for _, t := range raw {
+		if s, ok := t.(string); ok {
+			tags = append(tags, s)
+		}
+	}
+	return tags
+}
+
+func hasWizardTag(tags []string) bool {
+	for _, t := range tags {
+		if t == wizardTag {
+			return true
+		}
+	}
+	return false
+}
+
 func listAllWorkers(token string) ([]WorkerEntry, error) {
 	accounts, err := getAccounts(token)
 	if err != nil {
 		return nil, err
 	}
 	done := make(chan bool)
-	go spinner(done, "Fetching workers from all accounts...")
+	go spinner(done, "Fetching nova-wizard workers from all accounts...")
 	type result struct {
 		entries []WorkerEntry
 		order   int
@@ -407,11 +454,20 @@ func listAllWorkers(token string) ([]WorkerEntry, error) {
 		go func(idx int, acc map[string]interface{}) {
 			accID, _ := acc["id"].(string)
 			accName, _ := acc["name"].(string)
-			workers, err := listWorkersForAccount(accID, token)
+			// فقط worker هایی که tag nova-wizard دارن
+			result2, err := cfRequest("GET",
+				fmt.Sprintf("/accounts/%s/workers/scripts?tags=%s:yes", accID, wizardTag),
+				token, nil,
+			)
 			var entries []WorkerEntry
 			if err == nil {
-				for _, w := range workers {
-					name, _ := w["id"].(string)
+				raw, _ := result2["result"].([]interface{})
+				for _, w := range raw {
+					worker, ok := w.(map[string]interface{})
+					if !ok {
+						continue
+					}
+					name, _ := worker["id"].(string)
 					domain := getWorkerSubdomain(accID, name, token)
 					entries = append(entries, WorkerEntry{
 						AccountID:   accID,
@@ -456,7 +512,11 @@ func printWorkerList(workers []WorkerEntry, color string) {
 	for _, g := range groups {
 		fmt.Printf(" %s%s%s\n", GREEN+BOLD, g.name, NC)
 		for _, w := range g.workers {
-			fmt.Printf("   %s%d)%s %s%s%s", color, counter, NC, CYAN, w.WorkerName, NC)
+			if w.Tagged {
+				fmt.Printf("   %s%d)%s %s%s%s %s[nova]%s", color, counter, NC, CYAN, w.WorkerName, NC, GREEN+BOLD, NC)
+			} else {
+				fmt.Printf("   %s%d)%s %s%s%s", DIM, counter, NC, DIM, w.WorkerName, NC)
+			}
 			if w.WorkerURL != "" {
 				fmt.Printf(" %s(%s)%s", DIM, w.WorkerURL, NC)
 			}
@@ -680,12 +740,14 @@ func installNova() {
 			continue
 		}
 
+		addWorkerTag(accID, workerName, wizardTag, sessionToken)
 		workerDomain := enableWorkerSubdomain(accID, workerName, sessionToken)
 		if workerDomain == "" {
 			workerDomain = workerName + ".YOUR-SUBDOMAIN.workers.dev"
 		}
 
 		fmt.Printf("\n %s Deployed! %s%s%s\n", OK, CYAN, workerDomain, NC)
+		addWizardTag(accID, workerName, sessionToken)
 
 		deployedEntries = append(deployedEntries, WorkerEntry{
 			AccountID:   accID,
@@ -807,6 +869,7 @@ func updateNova() {
 			fmt.Printf("\n %s Failed: %s\n", ERR, err.Error())
 		} else {
 			fmt.Printf(" %s Updated!\n", OK)
+			addWizardTag(w.AccountID, w.WorkerName, sessionToken)
 		}
 	}
 
