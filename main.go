@@ -17,7 +17,7 @@ import (
 	"time"
 )
 
-const VERSION = "v1.0.4"
+const VERSION = "v1.0.5"
 
 var httpClient = &http.Client{
 	Timeout: 30 * time.Second,
@@ -454,26 +454,19 @@ func listAllWorkers(token string) ([]WorkerEntry, error) {
 		go func(idx int, acc map[string]interface{}) {
 			accID, _ := acc["id"].(string)
 			accName, _ := acc["name"].(string)
-			// فقط worker هایی که tag nova-wizard دارن
-			result2, err := cfRequest("GET",
-				fmt.Sprintf("/accounts/%s/workers/scripts?tags=%s:yes", accID, wizardTag),
-				token, nil,
-			)
+			workers, err := listWorkersForAccount(accID, token)
 			var entries []WorkerEntry
 			if err == nil {
-				raw, _ := result2["result"].([]interface{})
-				for _, w := range raw {
-					worker, ok := w.(map[string]interface{})
-					if !ok {
-						continue
-					}
-					name, _ := worker["id"].(string)
+				for _, w := range workers {
+					name, _ := w["id"].(string)
 					domain := getWorkerSubdomain(accID, name, token)
+					tags := getWorkerTags(accID, name, token)
 					entries = append(entries, WorkerEntry{
 						AccountID:   accID,
 						AccountName: accName,
 						WorkerName:  name,
 						WorkerURL:   domain,
+						Tagged:      hasWizardTag(tags),
 					})
 				}
 			}
@@ -778,7 +771,7 @@ func installNova() {
 	if len(deployedEntries) > 0 {
 		printOutputURLs(deployedEntries)
 		for _, e := range deployedEntries {
-			fmt.Printf(" %s Panel URL: %s%s/admin%s\n\n", OK, CYAN, "https://"+e.WorkerURL, NC)
+			fmt.Printf(" %s Panel URL: %s%s/admin%s\n", OK, CYAN, "https://"+e.WorkerURL, NC)
 		}
 		fmt.Printf(" %s Password  : %s%s%s\n\n", INFO, YELLOW, password, NC)
 	}
