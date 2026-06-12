@@ -778,8 +778,7 @@ func installNova() {
 	if len(deployedEntries) > 0 {
 		printOutputURLs(deployedEntries)
 		for _, e := range deployedEntries {
-			fmt.Printf(" %s Panel URL: %s%s/admin%s
-", OK, CYAN, "https://"+e.WorkerURL, NC)
+			fmt.Printf(" %s Panel URL: %s%s/admin%s\n\n", OK, CYAN, "https://"+e.WorkerURL, NC)
 		}
 		fmt.Printf(" %s Password  : %s%s%s\n\n", INFO, YELLOW, password, NC)
 	}
