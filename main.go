@@ -17,7 +17,7 @@ import (
 	"time"
 )
 
-const VERSION = "v1.0.6"
+const VERSION = "v1.0.7"
 
 var httpClient = &http.Client{
 	Timeout: 30 * time.Second,
@@ -211,6 +211,7 @@ func cfUploadWorker(accountID, workerName, token, scriptContent, kvID, kvName, p
 	metadata := map[string]interface{}{
 		"main_module":        "worker.js",
 		"compatibility_date": "2023-10-30",
+		"tags":               []string{"nova-wizard"},
 		"bindings": []map[string]interface{}{
 			{
 				"type":           "kv_namespace",
@@ -349,6 +350,30 @@ func downloadWorkerJS() (string, error) {
 	return string(data), nil
 }
 
+
+// getWorkerKVID از bindings یه worker، KVID رو برمی‌گردونه
+func getWorkerKVID(accountID, workerName, token string) string {
+	result, err := cfRequest("GET",
+		fmt.Sprintf("/accounts/%s/workers/scripts/%s/bindings", accountID, workerName),
+		token, nil,
+	)
+	if err != nil {
+		return ""
+	}
+	raw, _ := result["result"].([]interface{})
+	for _, b := range raw {
+		binding, ok := b.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		if binding["type"] == "kv_namespace" {
+			id, _ := binding["namespace_id"].(string)
+			return id
+		}
+	}
+	return ""
+}
+
 func listWorkersForAccount(accountID, token string) ([]map[string]interface{}, error) {
 	result, err := cfRequest("GET",
 		fmt.Sprintf("/accounts/%s/workers/scripts", accountID),
@@ -404,29 +429,52 @@ func addWorkerTag(accountID, workerName, tag, token string) {
 
 
 func addWizardTag(accountID, workerName, token string) {
-	cfRequest("PUT",
-		fmt.Sprintf("/accounts/%s/workers/scripts/%s/script-tags", accountID, workerName),
-		token,
-		[]string{wizardTag},
-	)
+	// tag رو با multipart/form-data ست کن
+	boundary := "WizardTagBoundary"
+	metaJSON := `{"tags":["nova-wizard"]}`
+	var buf bytes.Buffer
+	buf.WriteString("--" + boundary + "\r\n")
+	buf.WriteString("Content-Disposition: form-data; name=\"metadata\"\r\n")
+	buf.WriteString("Content-Type: application/json\r\n\r\n")
+	buf.WriteString(metaJSON)
+	buf.WriteString("\r\n--" + boundary + "--\r\n")
+	url := fmt.Sprintf("%s/accounts/%s/workers/scripts/%s/settings", cfAPI, accountID, workerName)
+	req, err := http.NewRequest("PATCH", url, &buf)
+	if err != nil {
+		return
+	}
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("Content-Type", "multipart/form-data; boundary="+boundary)
+	httpClient.Do(req)
 }
 
 func getWorkerTags(accountID, workerName, token string) []string {
+	// tag ها از لیست scripts خوانده می‌شن
 	result, err := cfRequest("GET",
-		fmt.Sprintf("/accounts/%s/workers/scripts/%s/script-tags", accountID, workerName),
+		fmt.Sprintf("/accounts/%s/workers/scripts", accountID),
 		token, nil,
 	)
 	if err != nil {
 		return nil
 	}
 	raw, _ := result["result"].([]interface{})
-	var tags []string
-	for _, t := range raw {
-		if s, ok := t.(string); ok {
-			tags = append(tags, s)
+	for _, w := range raw {
+		worker, ok := w.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		if worker["id"] == workerName {
+			tags, _ := worker["tags"].([]interface{})
+			var result []string
+			for _, t := range tags {
+				if s, ok := t.(string); ok {
+					result = append(result, s)
+				}
+			}
+			return result
 		}
 	}
-	return tags
+	return nil
 }
 
 func hasWizardTag(tags []string) bool {
@@ -841,17 +889,23 @@ func updateNova() {
 
 	for _, w := range selected {
 		fmt.Printf(" %s Updating: %s%s%s\n", INFO, CYAN, w.WorkerName, NC)
-		kvID := ""
+		kvID := w.KVID
 		password := "admin"
 		cfgFile := fmt.Sprintf(".nova-%s.json", w.AccountID[:8])
 		if data, err := os.ReadFile(cfgFile); err == nil {
 			var c Config
 			if json.Unmarshal(data, &c) == nil {
-				kvID = c.KVID
+				if c.KVID != "" {
+					kvID = c.KVID
+				}
 				if c.Password != "" {
 					password = c.Password
 				}
 			}
+		}
+		// اگه KV ID هنوز خالیه، از API بگیر
+		if kvID == "" {
+			kvID = getWorkerKVID(w.AccountID, w.WorkerName, sessionToken)
 		}
 		done := make(chan bool)
 		go spinner(done, "Redeploying...")
